@@ -8,7 +8,6 @@ type User struct {
 	Id        uint       `json:"id"`
 	Email     NullString `json:"email"`
 	Username  NullString `json:"username"`
-	Token     NullString `json:"token"`
 	CreatedAt NullTime   `json:"created_at"`
 	UpdatedAt NullTime   `json:"updated_at"`
 }
@@ -22,7 +21,7 @@ func (u User) ForeignKey() map[string]uint {
 }
 
 func (u User) Columns() map[string]interface{} {
-	return map[string]interface{}{"email": u.Email, "username": u.Username, "token": u.Token, "created_at": u.CreatedAt, "updated_at": u.UpdatedAt}
+	return map[string]interface{}{"email": u.Email, "username": u.Username, "created_at": u.CreatedAt, "updated_at": u.UpdatedAt}
 }
 
 func (u User) GetAll(stmnt string, params ...interface{}) *[]User {
@@ -32,7 +31,7 @@ func (u User) GetAll(stmnt string, params ...interface{}) *[]User {
 		rows, err := utils.DB.Query(stmnt)
 		handleError(err)
 		for rows.Next() {
-			rows.Scan(&user.Id, &user.Email, &user.Username, &user.Token, &user.CreatedAt, &user.UpdatedAt)
+			rows.Scan(&user.Id, &user.Email, &user.Username, &user.CreatedAt, &user.UpdatedAt)
 			users = append(users, user)
 		}
 	} else {
@@ -41,7 +40,7 @@ func (u User) GetAll(stmnt string, params ...interface{}) *[]User {
 		rows, err := stmntOut.Query(params...)
 		handleError(err)
 		for rows.Next() {
-			rows.Scan(&user.Id, &user.Email, &user.Username, &user.Token, &user.CreatedAt, &user.UpdatedAt)
+			rows.Scan(&user.Id, &user.Email, &user.Username, &user.CreatedAt, &user.UpdatedAt)
 			users = append(users, user)
 		}
 	}

@@ -11,23 +11,23 @@ import (
 )
 
 type NullBool struct {
-	Value sql.NullBool
+	sql.NullBool
 }
 
 type NullFloat64 struct {
-	Value sql.NullFloat64
+	sql.NullFloat64
 }
 
 type NullInt64 struct {
-	Value sql.NullInt64
+	sql.NullInt64
 }
 
 type NullString struct {
-	Value sql.NullString
+	sql.NullString
 }
 
 type NullTime struct {
-	Value mysql.NullTime
+	mysql.NullTime
 }
 
 type Model interface {
@@ -37,38 +37,38 @@ type Model interface {
 }
 
 func (nb *NullBool) MarshalJSON() ([]byte, error) {
-	if !nb.Value.Valid {
+	if !nb.Valid {
 		return []byte("null"), nil
 	}
-	return json.Marshal(nb.Value.Bool)
+	return json.Marshal(nb.Bool)
 }
 
 func (nf *NullFloat64) MarshalJSON() ([]byte, error) {
-	if !nf.Value.Valid {
+	if !nf.Valid {
 		return []byte("null"), nil
 	}
-	return json.Marshal(nf.Value.Float64)
+	return json.Marshal(nf.Float64)
 }
 
 func (ni *NullInt64) MarshalJSON() ([]byte, error) {
-	if !ni.Value.Valid {
+	if !ni.Valid {
 		return []byte("null"), nil
 	}
-	return json.Marshal(ni.Value.Int64)
+	return json.Marshal(ni.Int64)
 }
 
 func (ns *NullString) MarshalJSON() ([]byte, error) {
-	if !ns.Value.Valid {
+	if !ns.Valid {
 		return []byte("null"), nil
 	}
-	return json.Marshal(ns.Value.String)
+	return json.Marshal(ns.String)
 }
 
 func (nt *NullTime) MarshalJSON() ([]byte, error) {
-	if !nt.Value.Valid {
+	if !nt.Valid {
 		return []byte("null"), nil
 	}
-	val := fmt.Sprintf("\"%s\"", nt.Value.Time.Format(time.RFC3339))
+	val := fmt.Sprintf("\"%s\"", nt.Time.Format(time.RFC3339))
 	return []byte(val), nil
 }
 

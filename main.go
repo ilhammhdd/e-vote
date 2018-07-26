@@ -14,7 +14,7 @@ func main() {
 	utils.OpenDB("root", "", "", "e_vote")
 	defer utils.DB.Close()
 
-	utils.GenerateRSAPairToFile()
+	utils.GenerateECDSAKeyPairToFile()
 
 	http.Handle("/generate/token", middlewares.MustParams(http.HandlerFunc(handlers.GenerateToken), "username", "email"))
 	http.Handle("/verify/token", middlewares.MustHeaderParams(middlewares.Authenticate(http.HandlerFunc(handlers.VerifyToken)), "Token"))

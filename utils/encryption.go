@@ -1,98 +1,123 @@
 package utils
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"io/ioutil"
-	"log"
 	"os"
-	"strings"
-
-	jwt "github.com/dgrijalva/jwt-go"
 )
 
-func GenerateRSAPairToFile() {
-	_, errPrivate := os.Stat("rsa_private_key")
-	_, errPublic := os.Stat("rsa_public_key.pem")
+func GenerateECDSAKeyPairToFile() {
+	_, errPrivate := os.Stat("private_key.pem")
+	_, errPublic := os.Stat("public_key.pem")
 
 	if os.IsNotExist(errPrivate) && os.IsNotExist(errPublic) {
-
-		privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
-			log.Println(err)
+			PanicRecover(err)
 		}
 
-		publicKey := privateKey.PublicKey
+		publicKey := &privateKey.PublicKey
 
-		pemPrivateKeyFile, err := os.Create("rsa_private_key")
+		pemPrivateKeyFile, err := os.Create("private_key.pem")
 		if err != nil {
-			log.Println(err)
+			PanicRecover(err)
 		}
 
-		pemPublicKeyFile, err := os.Create("rsa_public_key.pem")
+		pemPublicKeyFile, err := os.Create("public_key.pem")
 		if err != nil {
-			log.Println(err)
+			PanicRecover(err)
+		}
+
+		defer pemPrivateKeyFile.Close()
+		defer pemPublicKeyFile.Close()
+
+		marshalPrivate, err := x509.MarshalECPrivateKey(privateKey)
+		if err != nil {
+			PanicRecover(err)
 		}
 
 		pemPrivateKeyBlock := &pem.Block{
-			Type:  "RSA PRIVATE KEY",
-			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+			Type:  "E256 PRIVATE KEY",
+			Bytes: marshalPrivate,
 		}
 
-		asn1Bytes, err := x509.MarshalPKIXPublicKey(&publicKey)
+		asn1Bytes, err := x509.MarshalPKIXPublicKey(publicKey)
 		if err != nil {
-			log.Println(err)
+			PanicRecover(err)
 		}
 
 		pemPublicKeyBlock := &pem.Block{
-			Type:  "RSA PUBLIC KEY",
+			Type:  "E256 PUBLIC KEY",
 			Bytes: asn1Bytes,
 		}
 
 		err = pem.Encode(pemPrivateKeyFile, pemPrivateKeyBlock)
 		if err != nil {
-			log.Println(err)
+			PanicRecover(err)
 		}
 
 		err = pem.Encode(pemPublicKeyFile, pemPublicKeyBlock)
 		if err != nil {
-			log.Println(err)
+			PanicRecover(err)
 		}
-
-		pemPrivateKeyFile.Close()
-		pemPublicKeyFile.Close()
 	}
 }
 
-func VerifyRSAFromPEM(tokenString string) error {
-	key, err := ioutil.ReadFile("rsa_public_key.pem")
+func getPublicKeyFromPEM(filePath string) *ecdsa.PublicKey {
+	publicKeyData, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		log.Println(err)
-	}
-	parsedKey, err := jwt.ParseRSAPublicKeyFromPEM(key)
-	if err != nil {
-		log.Println(err)
+		PanicRecover(err)
+		return nil
 	}
 
-	parts := strings.Split(tokenString, ".")
-	err = jwt.SigningMethodRS256.Verify(strings.Join(parts[0:2], "."), parts[2], parsedKey)
-	parts = parts[:0]
-	return err
+	publicPemBlock, _ := pem.Decode(publicKeyData)
+	if publicPemBlock == nil || publicPemBlock.Type != "E256 PUBLIC KEY" {
+		PanicRecover(errors.New("Failed to decode PEM block containing public key"))
+		return nil
+	}
+
+	parsedPublicKey, err := x509.ParsePKIXPublicKey(publicPemBlock.Bytes)
+	if err != nil {
+		if cert, err := x509.ParseCertificate(publicPemBlock.Bytes); err == nil {
+			parsedPublicKey = cert.PublicKey
+		} else {
+			PanicRecover(err)
+			return nil
+		}
+	}
+
+	publicKey, ok := parsedPublicKey.(*ecdsa.PublicKey)
+	if !ok {
+		PanicRecover(errors.New("not ECDSA public key"))
+		return nil
+	}
+
+	return publicKey
 }
 
-func GenerateRSATokenWithClaims(claims jwt.Claims) (string, error) {
-	key, err := ioutil.ReadFile("rsa_private_key")
+func getPrivateFromPem(filePath string) *ecdsa.PrivateKey {
+	privateKeyData, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		log.Println(err)
-	}
-	parsedKey, err := jwt.ParseRSAPrivateKeyFromPEM(key)
-	if err != nil {
-		log.Println(err)
+		PanicRecover(err)
+		return nil
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	privatePemBlock, _ := pem.Decode(privateKeyData)
+	if privatePemBlock == nil || privatePemBlock.Type != "E256 PRIVATE KEY" {
+		PanicRecover(errors.New("Failed to decode PEM block containing private key"))
+		return nil
+	}
 
-	return token.SignedString(parsedKey)
+	privateKey, err := x509.ParseECPrivateKey(privatePemBlock.Bytes)
+	if err != nil {
+		PanicRecover(err)
+		return nil
+	}
+
+	return privateKey
 }
